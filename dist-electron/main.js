@@ -4,8 +4,8 @@ const path = require('path');
 const fs = require('fs');
 let win = null;
 const isDev = process.env.NODE_ENV === 'development';
-const DATA_PATH = path.join(app.getPath('userData'), 'fiberrent_data.json');
-const EXPORT_DIR = path.join(app.getPath('documents'), 'FiberRentPro');
+const DATA_PATH = path.join(app.getPath('userData'), 'melonevents_data.json');
+const EXPORT_DIR = path.join(app.getPath('documents'), 'MelonEvents');
 if (!fs.existsSync(EXPORT_DIR)) {
     fs.mkdirSync(EXPORT_DIR, { recursive: true });
 }
@@ -15,7 +15,7 @@ function createWindow() {
         height: 800,
         minWidth: 1000,
         minHeight: 600,
-        title: 'Fiber Rent Pro',
+        title: 'Melon Events',
         autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),

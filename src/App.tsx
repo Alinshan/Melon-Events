@@ -10,7 +10,6 @@ import {
   Trash2,
   CheckCircle,
   Wine,
-  User,
   Calendar,
   IndianRupee,
   Briefcase,
@@ -385,12 +384,7 @@ function App() {
     setCleaningRentalId(null)
   }
 
-  const addSalary = (record: Omit<SalaryRecord, 'id'>) => {
-    setData(prev => ({
-      ...prev,
-      salaries: [{ ...record, id: Date.now().toString() }, ...prev.salaries]
-    }))
-  }
+  /* Removed unused addSalary */
 
   const addExpense = (record: Omit<ExpenseRecord, 'id'>) => {
     setData(prev => ({
@@ -474,6 +468,7 @@ function App() {
     setEditingRental(null)
   }
 
+  /* Removed addSalary as it is handled via markCleaned and manualClean */
   const updateSalary = (updated: SalaryRecord) => {
     setData(prev => ({
       ...prev,
@@ -560,7 +555,7 @@ function App() {
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
     window.electronAPI.exportExcel({
       fileName: `MelonEvents_${type}_${new Date().toISOString().split('T')[0]}.xlsx`,
-      buffer: new Uint8Array(excelBuffer)
+      buffer: Array.from(new Uint8Array(excelBuffer))
     })
   }
 
@@ -648,14 +643,14 @@ function App() {
         head: [tableData[0]],
         body: tableData.slice(1),
         theme: 'grid',
-        headStyles: { fillColor: primaryRed, textColor: 255, fontStyle: 'bold' },
+        headStyles: { fillColor: primaryRed as [number, number, number], textColor: 255, fontStyle: 'bold' },
         styles: { fontSize: 10, cellPadding: 6, valign: 'middle' },
-        columnStyles: {
+        columnStyles: { 
           1: { halign: 'center', cellWidth: 20 },
           2: { halign: 'right', cellWidth: 35 },
-          3: { halign: 'right', cellWidth: 35 }
+          3: { halign: 'right', cellWidth: 35 } 
         }
-      })
+      })      
 
       const finalY = (doc as any).lastAutoTable.finalY + 15
       const subtotal = (rental.plateCount * rental.platePrice) + (rental.glassCount * rental.glassPrice)
@@ -1326,7 +1321,7 @@ function App() {
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', background: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}
               >
                 <option value="">-- Select Employee --</option>
-                {data.settings.employees.map(emp => (
+                {data.settings.employees?.map(emp => (
                   <option key={emp} value={emp}>{emp}</option>
                 ))}
               </select>

@@ -4,8 +4,8 @@ interface Window {
   electronAPI: {
     getData: () => Promise<any>
     saveData: (data: any) => Promise<boolean>
-    exportExcel: (payload: { fileName: string; buffer: Uint8Array }) => Promise<string>
-    savePDF: (payload: { fileName: string; buffer: Uint8Array }) => Promise<string>
+    exportExcel: (payload: { fileName: string; buffer: number[] }) => Promise<string>
+    savePDF: (payload: { fileName: string; buffer: number[] }) => Promise<string>
     onMessage: (callback: any) => void
   }
 }
