@@ -1,7 +1,7 @@
 {
   "name": "melon-events",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "commonjs",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "build:vite": "tsc -b && vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build": "npm run build:vite && npm run build:electron && electron-builder",
+    "publish": "npm run build:vite && npm run build:electron && electron-builder --publish always",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -49,6 +50,13 @@
   "build": {
     "appId": "com.melonevents.rent",
     "productName": "Melon Events",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Alinshan",
+        "repo": "Melon-Events"
+      }
+    ],
     "directories": {
       "output": "release"
     },
