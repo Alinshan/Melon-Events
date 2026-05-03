@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export-excel', payload),
   savePDF: (payload: { fileName: string; buffer: number[] }) =>
     ipcRenderer.invoke('save-pdf', payload),
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  getVersion: () => ipcRenderer.invoke('get-version'),
 })

@@ -16,7 +16,11 @@ import {
   Wallet,
   Droplets,
   AlertTriangle,
-  Edit2
+  Edit2,
+  Sun,
+  Moon,
+  Info,
+  ExternalLink
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as XLSX from 'xlsx'
@@ -222,7 +226,8 @@ const EditExpenseModal = ({ expense, onSave, onCancel }: { expense: ExpenseRecor
 
 // --- App Component ---
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'rentals' | 'inventory' | 'salaries' | 'expenses'>('dashboard')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'rentals' | 'inventory' | 'salaries' | 'expenses' | 'about'>('dashboard')
   const [data, setData] = useState<AppData>({
     settings: { platePrice: 10, glassPrice: 5, plateCleaningPrice: 2, glassCleaningPrice: 1, totalPlates: 1000, totalGlasses: 500, employees: [] },
     rentals: [],
@@ -242,12 +247,14 @@ function App() {
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingSalary, setEditingSalary] = useState<SalaryRecord | null>(null)
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null)
+  const [showLicense, setShowLicense] = useState(false)
 
   // Load data on start
   useEffect(() => {
     window.electronAPI.getData().then((savedData: any) => {
       if (savedData) {
         if (!savedData.expenses) savedData.expenses = []
+        if (savedData.theme) setTheme(savedData.theme)
         setData(savedData)
       }
       setLoading(false)
@@ -257,9 +264,9 @@ function App() {
   // Auto-save data whenever it changes
   useEffect(() => {
     if (!loading) {
-      window.electronAPI.saveData(data)
+      window.electronAPI.saveData({ ...data, theme })
     }
-  }, [data, loading])
+  }, [data, theme, loading])
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -562,28 +569,34 @@ function App() {
   const generatePDF = (rental: Rental) => {
     try {
       const doc = new jsPDF()
-      const primaryRed = [211, 47, 47] // Brand Red
-      const brandYellow = [251, 191, 36] // Brand Yellow
-      const darkGrey = [66, 66, 66] // V-shape color
+      const primaryRed = [227, 30, 36] // Brand Red
+      const brandYellow = [255, 209, 0] // Brand Yellow
+      const darkGrey = [88, 89, 91] // V-shape color
 
       // --- Logo Drawing (Vector) ---
-      // Left Red Bar
+      // Left Red Shard
       doc.setFillColor(primaryRed[0], primaryRed[1], primaryRed[2])
       doc.setDrawColor(primaryRed[0], primaryRed[1], primaryRed[2])
-      doc.triangle(20, 15, 32, 12, 32, 40, 'F')
-      doc.triangle(20, 15, 32, 40, 20, 38, 'F')
+      doc.triangle(20, 15, 32, 17, 35, 45, 'F')
+      doc.triangle(20, 15, 35, 45, 22, 48, 'F')
 
-      // Right Yellow Bar
+      // Right Yellow Shard
       doc.setFillColor(brandYellow[0], brandYellow[1], brandYellow[2])
       doc.setDrawColor(brandYellow[0], brandYellow[1], brandYellow[2])
-      doc.triangle(35, 20, 47, 12, 47, 40, 'F')
-      doc.triangle(35, 20, 47, 40, 35, 45, 'F')
+      doc.triangle(38, 17, 50, 15, 48, 48, 'F')
+      doc.triangle(38, 17, 48, 48, 35, 45, 'F')
 
       // V-shape lines
       doc.setDrawColor(darkGrey[0], darkGrey[1], darkGrey[2])
-      doc.setLineWidth(0.8)
-      doc.line(26, 22, 34, 38)
-      doc.line(34, 38, 42, 22)
+      doc.setLineWidth(1)
+      doc.line(26, 25, 35, 40)
+      doc.line(35, 40, 44, 25)
+      
+      // White highlight
+      doc.setDrawColor(255, 255, 255)
+      doc.setLineWidth(0.3)
+      doc.line(29, 27, 35, 37)
+      doc.line(35, 37, 41, 27)
 
       // Logo Text
       doc.setFontSize(14)
@@ -707,25 +720,19 @@ function App() {
       height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', 
       alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' 
     }}>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-        <div style={{ width: '20px', height: '50px', background: '#D32F2F', transform: 'skewY(-5deg)' }} />
-        <div style={{ width: '20px', height: '50px', background: '#FBBF24', transform: 'skewY(5deg)', marginTop: '5px' }} />
-      </div>
+      <img src="logo.png" alt="Melon Events" style={{ width: '120px', height: '120px', marginBottom: '20px' }} />
       <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Melon Events</div>
       <div style={{ marginTop: '10px', color: '#94a3b8' }}>Loading your dashboard...</div>
     </div>
   )
 
   return (
-    <>
+    <div className={theme === 'light' ? 'light-theme' : ''} style={{ display: 'flex', height: '100vh', width: '100vw' }}>
       {/* Sidebar */}
       <nav className="sidebar">
-        <div className="logo" style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', gap: '4px', height: '32px', marginRight: '8px' }}>
-            <div style={{ width: '12px', height: '32px', background: '#D32F2F', transform: 'skewY(-5deg)' }} />
-            <div style={{ width: '12px', height: '32px', background: '#FBBF24', transform: 'skewY(5deg)', marginTop: '4px' }} />
-          </div>
-          <span style={{ color: 'white', fontWeight: 'bold' }}>Melon Events</span>
+        <div className="logo" style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '14px', padding: '0 0.5rem' }}>
+          <img src="logo-mark.png" alt="Logo" style={{ width: '52px', height: '52px', objectFit: 'contain' }} />
+          <span style={{ color: 'var(--text-primary)', fontWeight: '900', fontSize: '1.4rem', letterSpacing: '-0.03em', lineHeight: '1' }}>Melon Events</span>
         </div>
         <div className="nav-links">
           <div
@@ -758,6 +765,33 @@ function App() {
           >
             <Settings size={20} /> Settings
           </div>
+          <div
+            className={`nav-item ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => setActiveTab('about')}
+          >
+            <Info size={20} /> About
+          </div>
+          
+          <div
+            className="nav-item"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            style={{ marginTop: '1rem', border: '1px solid var(--border-color)' }}
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </div>
+        </div>
+        
+        <div style={{ 
+          marginTop: 'auto', 
+          padding: '1.5rem', 
+          borderTop: '1px solid var(--border-color)', 
+          fontSize: '0.7rem', 
+          color: 'var(--text-secondary)',
+          lineHeight: '1.4'
+        }}>
+          <div>© 2026 Melon Events</div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>Developed by Alinshan</div>
         </div>
       </nav>
 
@@ -1157,7 +1191,7 @@ function App() {
                           <td>{exp.date}</td>
                           <td>
                             <span style={{
-                              background: 'rgba(255,255,255,0.1)',
+                              background: 'var(--border-color)',
                               padding: '0.2rem 0.6rem',
                               borderRadius: '12px',
                               fontSize: '0.8rem',
@@ -1267,6 +1301,109 @@ function App() {
               </div>
             </motion.div>
           )}
+
+          {activeTab === 'about' && (
+            <motion.div
+              key="about"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <h1>About Melon Events</h1>
+              <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
+                <img src="logo-mark.png" alt="Melon Events" style={{ width: '80px', marginBottom: '1.5rem' }} />
+                <h2 style={{ marginBottom: '0.5rem' }}>Melon Events</h2>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.0 (Stable)</div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
+                  <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Developer</div>
+                    <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>Alinshan</div>
+                  </div>
+                  <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>License</div>
+                    <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>MIT License</div>
+                    <button 
+                      className="btn-secondary" 
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', marginTop: '0.5rem', width: 'auto' }}
+                      onClick={() => setShowLicense(true)}
+                    >
+                      View Text
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '2rem' }}>
+                  <h3 style={{ marginBottom: '1rem' }}>Updates & Support</h3>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                    Click the button below to check for the latest versions and documentation on the official GitHub repository.
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    <button className="btn-primary" onClick={() => (window as any).electronAPI.openExternal('https://github.com/Alinshan/Melon-Events/releases')}>
+                      <ExternalLink size={18} /> Visit GitHub Releases
+                    </button>
+                    <button className="btn-secondary" onClick={() => alert('Update check complete. You are using the latest version (1.0.0).')}>
+                      Check for Updates
+                    </button>
+                  </div>
+                </div>
+                
+        <div style={{ marginTop: '3rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  © 2026 Melon Events | Developed by Alinshan
+                </div>
+              </div>
+
+              {/* Full License Modal */}
+              {showLicense && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
+                  padding: '2rem'
+                }}>
+                  <div className="card" style={{ maxWidth: '600px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <h3>MIT License</h3>
+                      <button className="btn-secondary" onClick={() => setShowLicense(false)}>Close</button>
+                    </div>
+                    <pre style={{ 
+                      whiteSpace: 'pre-wrap', 
+                      fontSize: '0.85rem', 
+                      lineHeight: '1.6', 
+                      color: 'var(--text-primary)',
+                      fontFamily: 'monospace',
+                      textAlign: 'left',
+                      background: 'rgba(0,0,0,0.2)',
+                      padding: '1.5rem',
+                      borderRadius: '12px'
+                    }}>
+{`MIT License
+
+Copyright (c) 2026 Alinshan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 
@@ -1358,7 +1495,7 @@ function App() {
           onCancel={() => setEditingExpense(null)}
         />
       )}
-    </>
+    </div>
   )
 }
 
@@ -1530,13 +1667,13 @@ function BookingCalendar({ rentals }: { rentals: Rental[] }) {
                 cursor: dayRentals.length > 0 ? 'pointer' : 'default',
                 fontSize: '0.8rem',
                 fontWeight: isToday ? '800' : '400',
-                color: isToday ? 'var(--accent-color)' : isSelected ? 'white' : 'var(--text-primary)',
+                color: isToday ? 'var(--accent-color)' : isSelected ? '#ffffff' : 'var(--text-primary)',
                 background: isSelected
                   ? 'var(--accent-color)'
                   : isToday
                     ? 'rgba(56, 189, 248, 0.12)'
                     : dayRentals.length > 0
-                      ? 'rgba(255,255,255,0.05)'
+                      ? 'var(--border-color)'
                       : 'transparent',
                 border: isToday && !isSelected ? '1px solid var(--accent-color)' : '1px solid transparent',
                 transition: 'all 0.15s ease',
@@ -1548,7 +1685,7 @@ function BookingCalendar({ rentals }: { rentals: Rental[] }) {
                 <div style={{
                   width: '5px', height: '5px',
                   borderRadius: '50%',
-                  background: isSelected ? 'white' : dotColor,
+                  background: isSelected ? '#ffffff' : dotColor,
                   margin: '2px auto 0'
                 }} />
               )}
@@ -1580,7 +1717,8 @@ function BookingCalendar({ rentals }: { rentals: Rental[] }) {
           ) : (
             selectedRentals.map(r => (
               <div key={r.id} style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--bg-color)',
+        border: '1px solid var(--border-color)',
                 borderRadius: '10px',
                 padding: '0.6rem 0.75rem',
                 marginBottom: '0.4rem',
@@ -1589,7 +1727,7 @@ function BookingCalendar({ rentals }: { rentals: Rental[] }) {
                 <div style={{ fontWeight: '600', fontSize: '0.82rem' }}>{r.customerName}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                   {r.plateCount}P / {r.glassCount}G &nbsp;·&nbsp;
-                  <span style={{ color: 'var(--accent-color)' }}>₹{r.total}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>₹{r.total}</span>
                 </div>
               </div>
             ))
@@ -1622,7 +1760,7 @@ function ExpenseForm({ onSubmit }: { onSubmit: (record: Omit<ExpenseRecord, 'id'
   }
 
   return (
-    <form className="card" onSubmit={handleSubmit} style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+    <form className="card" onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
       <h3>Log Business Expense</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
         <div className="form-group">

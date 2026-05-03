@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -20,6 +20,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 600,
     title: 'Melon Events',
+    icon: path.join(__dirname, '..', 'public', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -65,18 +66,37 @@ ipcMain.handle('save-data', (_: any, data: any) => {
   return true
 })
 
-ipcMain.handle('export-excel', (_: any, payload: { fileName: string; buffer: number[] }) => {
-  const filePath = path.join(EXPORT_DIR, payload.fileName)
-  fs.writeFileSync(filePath, Buffer.from(payload.buffer))
-  shell.showItemInFolder(filePath)
-  return filePath
+ipcMain.handle('export-excel', async (_: any, payload: { fileName: string; buffer: number[] }) => {
+  const { filePath } = await dialog.showSaveDialog(win, {
+    title: 'Save Excel Report',
+    defaultPath: path.join(app.getPath('downloads'), payload.fileName),
+    filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+  })
+
+  if (filePath) {
+    fs.writeFileSync(filePath, Buffer.from(payload.buffer))
+    shell.showItemInFolder(filePath)
+    return filePath
+  }
+  return null
 })
 
-ipcMain.handle('save-pdf', (_: any, payload: { fileName: string; buffer: number[] }) => {
-  const invoiceDir = path.join(EXPORT_DIR, 'Invoices')
-  if (!fs.existsSync(invoiceDir)) fs.mkdirSync(invoiceDir, { recursive: true })
-  const filePath = path.join(invoiceDir, payload.fileName)
-  fs.writeFileSync(filePath, Buffer.from(payload.buffer))
-  shell.openPath(filePath)
-  return filePath
+ipcMain.handle('save-pdf', async (_: any, payload: { fileName: string; buffer: number[] }) => {
+  const { filePath } = await dialog.showSaveDialog(win, {
+    title: 'Save PDF Invoice',
+    defaultPath: path.join(app.getPath('downloads'), payload.fileName),
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+  })
+
+  if (filePath) {
+    fs.writeFileSync(filePath, Buffer.from(payload.buffer))
+    shell.openPath(filePath)
+    return filePath
+  }
+  return null
+})
+ipcMain.handle('get-version', () => app.getVersion())
+
+ipcMain.handle('open-external', (_: any, url: string) => {
+  shell.openExternal(url)
 })

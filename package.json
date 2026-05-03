@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Professional Rental Management & Billing System for Event Catering",
   "author": "Alinshan",
+  "license": "MIT",
   "type": "commonjs",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -52,6 +53,7 @@
   "build": {
     "appId": "com.melonevents.rent",
     "productName": "Melon Events",
+    "copyright": "Copyright © 2026 Alinshan",
     "publish": [
       {
         "provider": "github",
@@ -60,11 +62,12 @@
       }
     ],
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "win": {
       "target": "nsis",
-      "icon": "public/icon.png"
+      "icon": "build/icon.png"
     },
     "files": [
       "dist",
