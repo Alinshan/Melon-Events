@@ -2,6 +2,8 @@
   "name": "melon-events",
   "private": true,
   "version": "1.0.0",
+  "description": "Professional Rental Management & Billing System for Event Catering",
+  "author": "Alinshan",
   "type": "commonjs",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -62,7 +64,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "public/favicon.svg"
+      "icon": "public/icon.png"
     },
     "files": [
       "dist",
