@@ -20,7 +20,8 @@ import {
   Sun,
   Moon,
   Info,
-  ExternalLink
+  ExternalLink,
+  RotateCcw
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as XLSX from 'xlsx'
@@ -55,6 +56,10 @@ interface Rental {
   damageCharge?: number
   isCleaned?: boolean
   cleaningCost?: number
+  unusedPlateCount?: number
+  unusedGlassCount?: number
+  platesCleaned?: number
+  glassesCleaned?: number
 }
 
 interface SalaryRecord {
@@ -89,7 +94,9 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const total = (edited.plateCount * (edited.platePrice || settings.platePrice)) + (edited.glassCount * (edited.glassPrice || settings.glassPrice)) - (edited.discount || 0)
+    const usedPlates = Math.max(0, edited.plateCount - (edited.unusedPlateCount || 0))
+    const usedGlasses = Math.max(0, edited.glassCount - (edited.unusedGlassCount || 0))
+    const total = (usedPlates * (edited.platePrice || settings.platePrice)) + (usedGlasses * (edited.glassPrice || settings.glassPrice)) - (edited.discount || 0)
     onSave({ ...edited, total })
   }
 
@@ -119,12 +126,28 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
             <input type="number" value={edited.glassCount} onChange={e => setEdited({ ...edited, glassCount: Number(e.target.value) })} required />
           </div>
           <div className="form-group">
+            <label>Unused Plates</label>
+            <input type="number" value={edited.unusedPlateCount || 0} onChange={e => setEdited({ ...edited, unusedPlateCount: Number(e.target.value) })} />
+          </div>
+          <div className="form-group">
+            <label>Unused Glasses</label>
+            <input type="number" value={edited.unusedGlassCount || 0} onChange={e => setEdited({ ...edited, unusedGlassCount: Number(e.target.value) })} />
+          </div>
+          <div className="form-group">
             <label>Travel Expense (₹)</label>
             <input type="number" value={edited.travelExpense || 0} onChange={e => setEdited({ ...edited, travelExpense: Number(e.target.value) })} />
           </div>
           <div className="form-group">
             <label>Discount (₹)</label>
             <input type="number" value={edited.discount || 0} onChange={e => setEdited({ ...edited, discount: Number(e.target.value) })} />
+          </div>
+          <div className="form-group">
+            <label>Plate Price (₹)</label>
+            <input type="number" step="0.01" value={edited.platePrice} onChange={e => setEdited({ ...edited, platePrice: Number(e.target.value) })} />
+          </div>
+          <div className="form-group">
+            <label>Glass Price (₹)</label>
+            <input type="number" step="0.01" value={edited.glassPrice} onChange={e => setEdited({ ...edited, glassPrice: Number(e.target.value) })} />
           </div>
           <div className="form-group">
             <label>Damage Charge (₹)</label>
@@ -229,7 +252,7 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [activeTab, setActiveTab] = useState<'dashboard' | 'rentals' | 'inventory' | 'salaries' | 'expenses' | 'about'>('dashboard')
   const [data, setData] = useState<AppData>({
-    settings: { platePrice: 10, glassPrice: 5, plateCleaningPrice: 2, glassCleaningPrice: 1, totalPlates: 1000, totalGlasses: 500, employees: [] },
+    settings: { platePrice: 4, glassPrice: 1, plateCleaningPrice: 1, glassCleaningPrice: 0.4, totalPlates: 1000, totalGlasses: 500, employees: [] },
     rentals: [],
     salaries: [],
     expenses: []
@@ -237,13 +260,19 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [cleaningEmployee, setCleaningEmployee] = useState('')
   const [newEmployeeName, setNewEmployeeName] = useState('')
-  const [manualPlates, setManualPlates] = useState(0)
-  const [manualGlasses, setManualGlasses] = useState(0)
+  const [manualPlates, setManualPlates] = useState<string | number>('')
+  const [manualGlasses, setManualGlasses] = useState<string | number>('')
   const [manualEmployee, setManualEmployee] = useState('')
   const [returningRentalId, setReturningRentalId] = useState<string | null>(null)
-  const [damageChargeInput, setDamageChargeInput] = useState<string>('0')
+  const [damageChargeInput, setDamageChargeInput] = useState<string>('')
+  const [unusedPlatesInput, setUnusedPlatesInput] = useState<string>('')
+  const [unusedGlassesInput, setUnusedGlassesInput] = useState<string>('')
   const [cleaningRentalId, setCleaningRentalId] = useState<string | null>(null)
   const [cleaningEmployeeSelect, setCleaningEmployeeSelect] = useState<string>('')
+  const [cleaningPlatesInput, setCleaningPlatesInput] = useState<string>('')
+  const [cleaningGlassesInput, setCleaningGlassesInput] = useState<string>('')
+  const [cleaningPlateRateInput, setCleaningPlateRateInput] = useState<string>('')
+  const [cleaningGlassRateInput, setCleaningGlassRateInput] = useState<string>('')
   const [editingRental, setEditingRental] = useState<Rental | null>(null)
   const [editingSalary, setEditingSalary] = useState<SalaryRecord | null>(null)
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null)
@@ -275,8 +304,14 @@ function App() {
     const totalPlatesOut = data.rentals.filter(r => !r.isReturned).reduce((sum, r) => sum + r.plateCount, 0)
     const totalGlassesOut = data.rentals.filter(r => !r.isReturned).reduce((sum, r) => sum + r.glassCount, 0)
 
-    const platesPendingCleaning = data.rentals.filter(r => r.isReturned && !r.isCleaned).reduce((sum, r) => sum + r.plateCount, 0)
-    const glassesPendingCleaning = data.rentals.filter(r => r.isReturned && !r.isCleaned).reduce((sum, r) => sum + r.glassCount, 0)
+    const platesPendingCleaning = data.rentals.filter(r => r.isReturned && !r.isCleaned).reduce((sum, r) => {
+      const pending = (r.plateCount - (r.unusedPlateCount || 0)) - (r.platesCleaned || 0)
+      return sum + Math.max(0, pending)
+    }, 0)
+    const glassesPendingCleaning = data.rentals.filter(r => r.isReturned && !r.isCleaned).reduce((sum, r) => {
+      const pending = (r.glassCount - (r.unusedGlassCount || 0)) - (r.glassesCleaned || 0)
+      return sum + Math.max(0, pending)
+    }, 0)
 
     const totalManualCleaningSalaries = data.salaries.filter(s => s.rentalId === 'MANUAL').reduce((sum, s) => sum + s.totalSalary, 0)
 
@@ -329,18 +364,38 @@ function App() {
 
   const handleInitiateReturn = (id: string) => {
     setReturningRentalId(id)
-    setDamageChargeInput('0')
+    setDamageChargeInput('')
+    setUnusedPlatesInput('')
+    setUnusedGlassesInput('')
   }
 
   const confirmReturn = (e: React.FormEvent) => {
     e.preventDefault()
     if (!returningRentalId) return
     const damageCharge = Number(damageChargeInput) || 0
+    const unusedPlates = Number(unusedPlatesInput) || 0
+    const unusedGlasses = Number(unusedGlassesInput) || 0
     const returnDate = new Date().toISOString().split('T')[0]
 
     setData(prev => ({
       ...prev,
-      rentals: prev.rentals.map(r => r.id === returningRentalId ? { ...r, isReturned: true, returnDate, damageCharge } : r)
+      rentals: prev.rentals.map(r => {
+        if (r.id === returningRentalId) {
+          const usedPlates = Math.max(0, r.plateCount - unusedPlates)
+          const usedGlasses = Math.max(0, r.glassCount - unusedGlasses)
+          const total = (usedPlates * r.platePrice) + (usedGlasses * r.glassPrice) - r.discount
+          return {
+            ...r,
+            isReturned: true,
+            returnDate,
+            damageCharge,
+            unusedPlateCount: unusedPlates,
+            unusedGlassCount: unusedGlasses,
+            total
+          }
+        }
+        return r
+      })
     }))
     setReturningRentalId(null)
   }
@@ -350,8 +405,20 @@ function App() {
   }
 
   const handleInitiateCleaning = (id: string) => {
+    const rental = data.rentals.find(r => r.id === id)
+    if (!rental) return
     setCleaningRentalId(id)
     setCleaningEmployeeSelect('')
+    
+    const usedPlates = rental.plateCount - (rental.unusedPlateCount || 0)
+    const usedGlasses = rental.glassCount - (rental.unusedGlassCount || 0)
+    const pendingPlates = Math.max(0, usedPlates - (rental.platesCleaned || 0))
+    const pendingGlasses = Math.max(0, usedGlasses - (rental.glassesCleaned || 0))
+    
+    setCleaningPlatesInput(pendingPlates.toString())
+    setCleaningGlassesInput(pendingGlasses.toString())
+    setCleaningPlateRateInput(data.settings.plateCleaningPrice.toString())
+    setCleaningGlassRateInput(data.settings.glassCleaningPrice.toString())
   }
 
   const confirmCleaning = (e: React.FormEvent) => {
@@ -365,23 +432,44 @@ function App() {
     const rental = data.rentals.find(r => r.id === cleaningRentalId)
     if (!rental) return
 
-    const totalSalary = (rental.plateCount * data.settings.plateCleaningPrice) + (rental.glassCount * data.settings.glassCleaningPrice)
+    const platesToClean = Number(cleaningPlatesInput) || 0
+    const glassesToClean = Number(cleaningGlassesInput) || 0
+    const plateRate = Number(cleaningPlateRateInput) || 0
+    const glassRate = Number(cleaningGlassRateInput) || 0
+    const totalSalary = (platesToClean * plateRate) + (glassesToClean * glassRate)
 
     const newSalary: SalaryRecord = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
       employeeName: cleaningEmployeeSelect,
       rentalId: rental.id,
-      plateCount: rental.plateCount,
-      glassCount: rental.glassCount,
-      plateRate: data.settings.plateCleaningPrice,
-      glassRate: data.settings.glassCleaningPrice,
+      plateCount: platesToClean,
+      glassCount: glassesToClean,
+      plateRate,
+      glassRate,
       totalSalary
     }
 
     setData(prev => ({
       ...prev,
-      rentals: prev.rentals.map(r => r.id === cleaningRentalId ? { ...r, isCleaned: true, cleaningCost: totalSalary } : r),
+      rentals: prev.rentals.map(r => {
+        if (r.id === cleaningRentalId) {
+          const newPlatesCleaned = (r.platesCleaned || 0) + platesToClean
+          const newGlassesCleaned = (r.glassesCleaned || 0) + glassesToClean
+          const usedPlates = r.plateCount - (r.unusedPlateCount || 0)
+          const usedGlasses = r.glassCount - (r.unusedGlassCount || 0)
+          const isFullyCleaned = newPlatesCleaned >= usedPlates && newGlassesCleaned >= usedGlasses
+          
+          return {
+            ...r,
+            platesCleaned: newPlatesCleaned,
+            glassesCleaned: newGlassesCleaned,
+            isCleaned: isFullyCleaned,
+            cleaningCost: (r.cleaningCost || 0) + totalSalary
+          }
+        }
+        return r
+      }),
       salaries: [newSalary, ...prev.salaries]
     }))
     setCleaningRentalId(null)
@@ -408,15 +496,20 @@ function App() {
     const rental = data.rentals.find(r => r.id === rentalId)
     if (!rental) return
 
-    const totalSalary = (rental.plateCount * data.settings.plateCleaningPrice) + (rental.glassCount * data.settings.glassCleaningPrice)
+    const usedPlates = rental.plateCount - (rental.unusedPlateCount || 0)
+    const usedGlasses = rental.glassCount - (rental.unusedGlassCount || 0)
+    const pendingPlates = Math.max(0, usedPlates - (rental.platesCleaned || 0))
+    const pendingGlasses = Math.max(0, usedGlasses - (rental.glassesCleaned || 0))
+
+    const totalSalary = (pendingPlates * data.settings.plateCleaningPrice) + (pendingGlasses * data.settings.glassCleaningPrice)
 
     const newSalary: SalaryRecord = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
       employeeName: cleaningEmployee,
       rentalId: rental.id,
-      plateCount: rental.plateCount,
-      glassCount: rental.glassCount,
+      plateCount: pendingPlates,
+      glassCount: pendingGlasses,
       plateRate: data.settings.plateCleaningPrice,
       glassRate: data.settings.glassCleaningPrice,
       totalSalary
@@ -424,7 +517,13 @@ function App() {
 
     setData(prev => ({
       ...prev,
-      rentals: prev.rentals.map(r => r.id === rentalId ? { ...r, isCleaned: true, cleaningCost: totalSalary } : r),
+      rentals: prev.rentals.map(r => r.id === rentalId ? { 
+        ...r, 
+        platesCleaned: (r.platesCleaned || 0) + pendingPlates,
+        glassesCleaned: (r.glassesCleaned || 0) + pendingGlasses,
+        isCleaned: true, 
+        cleaningCost: (r.cleaningCost || 0) + totalSalary 
+      } : r),
       salaries: [newSalary, ...prev.salaries]
     }))
   }
@@ -497,17 +596,19 @@ function App() {
       alert('Please select an Employee for Manual Cleaning.')
       return
     }
-    if (manualPlates === 0 && manualGlasses === 0) return
+    const platesToClean = Number(manualPlates) || 0
+    const glassesToClean = Number(manualGlasses) || 0
+    if (platesToClean === 0 && glassesToClean === 0) return
 
-    const totalSalary = (manualPlates * data.settings.plateCleaningPrice) + (manualGlasses * data.settings.glassCleaningPrice)
+    const totalSalary = (platesToClean * data.settings.plateCleaningPrice) + (glassesToClean * data.settings.glassCleaningPrice)
 
     const newSalary: SalaryRecord = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
       employeeName: manualEmployee,
       rentalId: 'MANUAL',
-      plateCount: manualPlates,
-      glassCount: manualGlasses,
+      plateCount: platesToClean,
+      glassCount: glassesToClean,
       plateRate: data.settings.plateCleaningPrice,
       glassRate: data.settings.glassCleaningPrice,
       totalSalary
@@ -517,8 +618,8 @@ function App() {
       ...prev,
       salaries: [newSalary, ...prev.salaries]
     }))
-    setManualPlates(0)
-    setManualGlasses(0)
+    setManualPlates('')
+    setManualGlasses('')
   }
 
   const handleAddEmployee = () => {
@@ -591,7 +692,7 @@ function App() {
       doc.setLineWidth(1)
       doc.line(26, 25, 35, 40)
       doc.line(35, 40, 44, 25)
-      
+
       // White highlight
       doc.setDrawColor(255, 255, 255)
       doc.setLineWidth(0.3)
@@ -603,7 +704,7 @@ function App() {
       doc.setTextColor(0, 0, 0)
       doc.setFont("helvetica", "bold")
       doc.text('Melon Events', 20, 52)
-      
+
       doc.setFontSize(9)
       doc.setFont("helvetica", "normal")
       doc.setTextColor(100)
@@ -641,11 +742,17 @@ function App() {
       doc.text(rental.customerName, 140, 78)
 
       // --- Items Table ---
-      const tableData = [
-        ['Description', 'Qty', 'Rate', 'Total'],
-        ['Fiber Plates Rental', rental.plateCount.toString(), `Rs. ${rental.platePrice.toFixed(2)}`, `Rs. ${(rental.plateCount * rental.platePrice).toFixed(2)}`],
-        ['Glasses Rental', rental.glassCount.toString(), `Rs. ${rental.glassPrice.toFixed(2)}`, `Rs. ${(rental.glassCount * rental.glassPrice).toFixed(2)}`],
-      ]
+      const tableData = [['Description', 'Qty', 'Rate', 'Total']]
+      
+      tableData.push(['Fiber Plates Rental', rental.plateCount.toString(), `Rs. ${rental.platePrice.toFixed(2)}`, `Rs. ${(rental.plateCount * rental.platePrice).toFixed(2)}`])
+      if (rental.unusedPlateCount && rental.unusedPlateCount > 0) {
+        tableData.push(['Unused Plates (Credit)', `-${rental.unusedPlateCount}`, `Rs. ${rental.platePrice.toFixed(2)}`, `-Rs. ${(rental.unusedPlateCount * rental.platePrice).toFixed(2)}`])
+      }
+      
+      tableData.push(['Glasses Rental', rental.glassCount.toString(), `Rs. ${rental.glassPrice.toFixed(2)}`, `Rs. ${(rental.glassCount * rental.glassPrice).toFixed(2)}`])
+      if (rental.unusedGlassCount && rental.unusedGlassCount > 0) {
+        tableData.push(['Unused Glasses (Credit)', `-${rental.unusedGlassCount}`, `Rs. ${rental.glassPrice.toFixed(2)}`, `-Rs. ${(rental.unusedGlassCount * rental.glassPrice).toFixed(2)}`])
+      }
 
       if (rental.damageCharge && rental.damageCharge > 0) {
         tableData.push(['Damage / Missing Charges', '-', '-', `Rs. ${rental.damageCharge.toFixed(2)}`])
@@ -658,15 +765,16 @@ function App() {
         theme: 'grid',
         headStyles: { fillColor: primaryRed as [number, number, number], textColor: 255, fontStyle: 'bold' },
         styles: { fontSize: 10, cellPadding: 6, valign: 'middle' },
-        columnStyles: { 
+        columnStyles: {
           1: { halign: 'center', cellWidth: 20 },
           2: { halign: 'right', cellWidth: 35 },
-          3: { halign: 'right', cellWidth: 35 } 
+          3: { halign: 'right', cellWidth: 35 }
         }
-      })      
+      })
 
       const finalY = (doc as any).lastAutoTable.finalY + 15
-      const subtotal = (rental.plateCount * rental.platePrice) + (rental.glassCount * rental.glassPrice)
+      const subtotal = ((rental.plateCount - (rental.unusedPlateCount || 0)) * rental.platePrice) + 
+                       ((rental.glassCount - (rental.unusedGlassCount || 0)) * rental.glassPrice)
       const totalWithDamage = subtotal - (rental.discount || 0) + (rental.damageCharge || 0)
 
       // --- Totals Section ---
@@ -716,9 +824,9 @@ function App() {
   }
 
   if (loading) return (
-    <div style={{ 
-      height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', 
-      alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' 
+    <div style={{
+      height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white'
     }}>
       <img src="logo.png" alt="Melon Events" style={{ width: '120px', height: '120px', marginBottom: '20px' }} />
       <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Melon Events</div>
@@ -771,7 +879,7 @@ function App() {
           >
             <Info size={20} /> About
           </div>
-          
+
           <div
             className="nav-item"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -781,12 +889,12 @@ function App() {
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </div>
         </div>
-        
-        <div style={{ 
-          marginTop: 'auto', 
-          padding: '1.5rem', 
-          borderTop: '1px solid var(--border-color)', 
-          fontSize: '0.7rem', 
+
+        <div style={{
+          marginTop: 'auto',
+          padding: '1.5rem',
+          borderTop: '1px solid var(--border-color)',
+          fontSize: '0.7rem',
           color: 'var(--text-secondary)',
           lineHeight: '1.4'
         }}>
@@ -941,7 +1049,14 @@ function App() {
                         <tr key={rental.id}>
                           <td>{rental.date}</td>
                           <td>{rental.customerName}</td>
-                          <td>{rental.plateCount} / {rental.glassCount}</td>
+                          <td>
+                            <div>{rental.plateCount} / {rental.glassCount}</div>
+                            {(rental.unusedPlateCount || rental.unusedGlassCount) ? (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                Unused: {rental.unusedPlateCount || 0}P / {rental.unusedGlassCount || 0}G
+                              </div>
+                            ) : null}
+                          </td>
                           <td style={{ fontWeight: '600' }}>₹{custBill.toFixed(2)}</td>
                           <td>
                             <span className={`badge ${rental.isReturned ? 'badge-success' : 'badge-warning'}`}>
@@ -1048,9 +1163,11 @@ function App() {
                         <tr key={rental.id}>
                           <td>{rental.date}</td>
                           <td>{rental.customerName}</td>
-                          <td>{rental.plateCount} / {rental.glassCount}</td>
+                          <td>
+                            {Math.max(0, rental.plateCount - (rental.unusedPlateCount || 0) - (rental.platesCleaned || 0))} / {Math.max(0, rental.glassCount - (rental.unusedGlassCount || 0) - (rental.glassesCleaned || 0))}
+                          </td>
                           <td style={{ color: 'var(--success)', fontWeight: '600' }}>
-                            ₹{((rental.plateCount * data.settings.plateCleaningPrice) + (rental.glassCount * data.settings.glassCleaningPrice)).toFixed(2)}
+                            ₹{((Math.max(0, rental.plateCount - (rental.unusedPlateCount || 0) - (rental.platesCleaned || 0)) * data.settings.plateCleaningPrice) + (Math.max(0, rental.glassCount - (rental.unusedGlassCount || 0) - (rental.glassesCleaned || 0)) * data.settings.glassCleaningPrice)).toFixed(2)}
                           </td>
                           <td>
                             <button
@@ -1086,26 +1203,26 @@ function App() {
                           type="number"
                           min="0"
                           value={manualPlates}
-                          onChange={e => setManualPlates(Number(e.target.value))}
+                          onChange={e => setManualPlates(e.target.value)}
                           style={{ width: '60px', padding: '0.2rem 0.4rem' }}
                         /> P /
                         <input
                           type="number"
                           min="0"
                           value={manualGlasses}
-                          onChange={e => setManualGlasses(Number(e.target.value))}
+                          onChange={e => setManualGlasses(e.target.value)}
                           style={{ width: '60px', padding: '0.2rem 0.4rem' }}
                         /> G
                       </td>
                       <td style={{ color: 'var(--success)', fontWeight: '600' }}>
-                        ₹{((manualPlates * data.settings.plateCleaningPrice) + (manualGlasses * data.settings.glassCleaningPrice)).toFixed(2)}
+                        ₹{((Number(manualPlates) * data.settings.plateCleaningPrice) + (Number(manualGlasses) * data.settings.glassCleaningPrice)).toFixed(2)}
                       </td>
                       <td>
                         <button
                           className="btn-secondary"
                           style={{ padding: '0.4rem 0.8rem', borderColor: 'var(--accent-color)', color: 'var(--accent-color)' }}
                           onClick={handleManualClean}
-                          disabled={manualPlates === 0 && manualGlasses === 0}
+                          disabled={!manualPlates && !manualGlasses}
                         >
                           <CheckCircle size={14} style={{ marginRight: '4px' }} /> Mark Cleaned
                         </button>
@@ -1288,6 +1405,21 @@ function App() {
                     onChange={e => updateSettings({ ...data.settings, glassCleaningPrice: Number(e.target.value) })}
                   />
                 </div>
+                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-start' }}>
+                  <button className="btn-secondary" onClick={() => {
+                    if (window.confirm("Restore default prices and cleaning charges? This will not affect your existing rental records.")) {
+                      updateSettings({
+                        ...data.settings,
+                        platePrice: 4,
+                        glassPrice: 1,
+                        plateCleaningPrice: 1,
+                        glassCleaningPrice: 0.4
+                      })
+                    }
+                  }}>
+                    <RotateCcw size={16} style={{ marginRight: '0.5rem' }} /> Restore Default Prices
+                  </button>
+                </div>
                 <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
                 <div style={{ marginTop: '2rem' }}>
                   <h3 style={{ color: 'var(--danger)' }}>Danger Zone</h3>
@@ -1313,8 +1445,8 @@ function App() {
               <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
                 <img src="logo-mark.png" alt="Melon Events" style={{ width: '80px', marginBottom: '1.5rem' }} />
                 <h2 style={{ marginBottom: '0.5rem' }}>Melon Events</h2>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.0 (Stable)</div>
-                
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.1 (Stable)</div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
                   <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Developer</div>
@@ -1323,8 +1455,8 @@ function App() {
                   <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>License</div>
                     <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>MIT License</div>
-                    <button 
-                      className="btn-secondary" 
+                    <button
+                      className="btn-secondary"
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', marginTop: '0.5rem', width: 'auto' }}
                       onClick={() => setShowLicense(true)}
                     >
@@ -1347,8 +1479,8 @@ function App() {
                     </button>
                   </div>
                 </div>
-                
-        <div style={{ marginTop: '3rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+
+                <div style={{ marginTop: '3rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   © 2026 Melon Events | Developed by Alinshan
                 </div>
               </div>
@@ -1366,10 +1498,10 @@ function App() {
                       <h3>MIT License</h3>
                       <button className="btn-secondary" onClick={() => setShowLicense(false)}>Close</button>
                     </div>
-                    <pre style={{ 
-                      whiteSpace: 'pre-wrap', 
-                      fontSize: '0.85rem', 
-                      lineHeight: '1.6', 
+                    <pre style={{
+                      whiteSpace: 'pre-wrap',
+                      fontSize: '0.85rem',
+                      lineHeight: '1.6',
                       color: 'var(--text-primary)',
                       fontFamily: 'monospace',
                       textAlign: 'left',
@@ -1377,7 +1509,7 @@ function App() {
                       padding: '1.5rem',
                       borderRadius: '12px'
                     }}>
-{`MIT License
+                      {`MIT License
 
 Copyright (c) 2026 Alinshan
 
@@ -1419,16 +1551,36 @@ SOFTWARE.`}
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
               Are there any damage or missing item charges for this rental?
             </p>
-            <div className="form-group">
-              <label>Damage Charges (₹)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={damageChargeInput}
-                onChange={e => setDamageChargeInput(e.target.value)}
-                autoFocus
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="form-group">
+                <label>Unused Plates</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={unusedPlatesInput}
+                  onChange={e => setUnusedPlatesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Unused Glasses</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={unusedGlassesInput}
+                  onChange={e => setUnusedGlassesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label>Damage Charges (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={damageChargeInput}
+                  onChange={e => setDamageChargeInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
               <button type="button" className="btn-secondary" onClick={cancelReturn}>Cancel</button>
@@ -1450,7 +1602,7 @@ SOFTWARE.`}
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
               Select an employee to assign this cleaning task.
             </p>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
               <label>Employee Name</label>
               <select
                 value={cleaningEmployeeSelect}
@@ -1462,6 +1614,51 @@ SOFTWARE.`}
                   <option key={emp} value={emp}>{emp}</option>
                 ))}
               </select>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="form-group">
+                <label>Plates to Clean</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={cleaningPlatesInput}
+                  onChange={e => setCleaningPlatesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Glasses to Clean</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={cleaningGlassesInput}
+                  onChange={e => setCleaningGlassesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Plate Rate (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cleaningPlateRateInput}
+                  onChange={e => setCleaningPlateRateInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Glass Rate (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cleaningGlassRateInput}
+                  onChange={e => setCleaningGlassRateInput(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--success)', textAlign: 'right', marginBottom: '1rem' }}>
+              Total Salary: ₹{((Number(cleaningPlatesInput) * Number(cleaningPlateRateInput)) + (Number(cleaningGlassesInput) * Number(cleaningGlassRateInput))).toFixed(2)}
             </div>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
               <button type="button" className="btn-secondary" onClick={cancelCleaning}>Cancel</button>
@@ -1503,14 +1700,16 @@ SOFTWARE.`}
 
 function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmit: any }) {
   const [customer, setCustomer] = useState('')
-  const [plates, setPlates] = useState(0)
-  const [glasses, setGlasses] = useState(0)
-  const [discount, setDiscount] = useState(0)
-  const [travelExpense, setTravelExpense] = useState(0)
+  const [plates, setPlates] = useState<string | number>('')
+  const [glasses, setGlasses] = useState<string | number>('')
+  const [platePriceOverride, setPlatePriceOverride] = useState<string | number>(settings.platePrice)
+  const [glassPriceOverride, setGlassPriceOverride] = useState<string | number>(settings.glassPrice)
+  const [discount, setDiscount] = useState<string | number>('')
+  const [travelExpense, setTravelExpense] = useState<string | number>('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
 
-  const subtotal = (plates * settings.platePrice) + (glasses * settings.glassPrice)
-  const total = subtotal - discount
+  const subtotal = (Number(plates) * Number(platePriceOverride)) + (Number(glasses) * Number(glassPriceOverride))
+  const total = subtotal - Number(discount)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -1519,18 +1718,18 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
       customerName: customer,
       plateCount: plates,
       glassCount: glasses,
-      platePrice: settings.platePrice,
-      glassPrice: settings.glassPrice,
+      platePrice: Number(platePriceOverride),
+      glassPrice: Number(glassPriceOverride),
       discount,
       travelExpense,
       total,
       date
     })
     setCustomer('')
-    setPlates(0)
-    setGlasses(0)
-    setDiscount(0)
-    setTravelExpense(0)
+    setPlates('')
+    setGlasses('')
+    setDiscount('')
+    setTravelExpense('')
   }
 
   return (
@@ -1547,19 +1746,27 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
         </div>
         <div className="form-group">
           <label>Plate Count</label>
-          <input type="number" min="0" value={plates} onChange={e => setPlates(Number(e.target.value))} />
+          <input type="number" min="0" value={plates} onChange={e => setPlates(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Plate Price (₹)</label>
+          <input type="number" min="0" step="0.01" value={platePriceOverride} onChange={e => setPlatePriceOverride(e.target.value)} />
         </div>
         <div className="form-group">
           <label>Glass Count</label>
-          <input type="number" min="0" value={glasses} onChange={e => setGlasses(Number(e.target.value))} />
+          <input type="number" min="0" value={glasses} onChange={e => setGlasses(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Glass Price (₹)</label>
+          <input type="number" min="0" step="0.01" value={glassPriceOverride} onChange={e => setGlassPriceOverride(e.target.value)} />
         </div>
         <div className="form-group">
           <label>Discount (₹)</label>
-          <input type="number" min="0" step="0.01" value={discount} onChange={e => setDiscount(Number(e.target.value))} />
+          <input type="number" min="0" step="0.01" value={discount} onChange={e => setDiscount(e.target.value)} />
         </div>
         <div className="form-group">
           <label>Travel Expense (₹)</label>
-          <input type="number" min="0" step="0.01" value={travelExpense} onChange={e => setTravelExpense(Number(e.target.value))} placeholder="Internal cost" />
+          <input type="number" min="0" step="0.01" value={travelExpense} onChange={e => setTravelExpense(e.target.value)} placeholder="Internal cost" />
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
@@ -1718,7 +1925,7 @@ function BookingCalendar({ rentals }: { rentals: Rental[] }) {
             selectedRentals.map(r => (
               <div key={r.id} style={{
                 background: 'var(--bg-color)',
-        border: '1px solid var(--border-color)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '10px',
                 padding: '0.6rem 0.75rem',
                 marginBottom: '0.4rem',

@@ -1,6 +1,11 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { autoUpdater } = require('electron-updater')
+
+// Configure AutoUpdater
+autoUpdater.autoDownload = false // Let user decide
+autoUpdater.autoInstallOnAppQuit = true
 
 let win: any = null
 
@@ -99,4 +104,45 @@ ipcMain.handle('get-version', () => app.getVersion())
 
 ipcMain.handle('open-external', (_: any, url: string) => {
   shell.openExternal(url)
+})
+
+// --- AutoUpdate Logic ---
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) return { status: 'dev', message: 'Update check skipped in development mode.' }
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    return { status: 'checking', result }
+  } catch (error: any) {
+    return { status: 'error', message: error.message }
+  }
+})
+
+autoUpdater.on('update-available', (info: any) => {
+  dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'Update Available',
+    message: `A new version (${info.version}) is available. Do you want to download it now?`,
+    buttons: ['Download', 'Later']
+  }).then((result: any) => {
+    if (result.response === 0) {
+      autoUpdater.downloadUpdate()
+    }
+  })
+})
+
+autoUpdater.on('update-downloaded', (info: any) => {
+  dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'Update Ready',
+    message: `Version ${info.version} has been downloaded and is ready to install.`,
+    buttons: ['Install and Relaunch', 'Later']
+  }).then((result: any) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall()
+    }
+  })
+})
+
+autoUpdater.on('error', (err: any) => {
+  console.error('Update error:', err)
 })

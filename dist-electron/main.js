@@ -2,6 +2,10 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
+// Configure AutoUpdater
+autoUpdater.autoDownload = false; // Let user decide
+autoUpdater.autoInstallOnAppQuit = true;
 let win = null;
 const isDev = process.env.NODE_ENV === 'development';
 const DATA_PATH = path.join(app.getPath('userData'), 'melonevents_data.json');
@@ -86,4 +90,43 @@ ipcMain.handle('save-pdf', async (_, payload) => {
 ipcMain.handle('get-version', () => app.getVersion());
 ipcMain.handle('open-external', (_, url) => {
     shell.openExternal(url);
+});
+// --- AutoUpdate Logic ---
+ipcMain.handle('check-for-updates', async () => {
+    if (isDev)
+        return { status: 'dev', message: 'Update check skipped in development mode.' };
+    try {
+        const result = await autoUpdater.checkForUpdates();
+        return { status: 'checking', result };
+    }
+    catch (error) {
+        return { status: 'error', message: error.message };
+    }
+});
+autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version (${info.version}) is available. Do you want to download it now?`,
+        buttons: ['Download', 'Later']
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.downloadUpdate();
+        }
+    });
+});
+autoUpdater.on('update-downloaded', (info) => {
+    dialog.showMessageBox(win, {
+        type: 'info',
+        title: 'Update Ready',
+        message: `Version ${info.version} has been downloaded and is ready to install.`,
+        buttons: ['Install and Relaunch', 'Later']
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.quitAndInstall();
+        }
+    });
+});
+autoUpdater.on('error', (err) => {
+    console.error('Update error:', err);
 });
