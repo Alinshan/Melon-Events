@@ -65,7 +65,7 @@ ipcMain.handle('get-data', () => {
     return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
   }
   return {
-    settings: { platePrice: 10, glassPrice: 5, plateCleaningPrice: 2, glassCleaningPrice: 1 },
+    settings: { platePrice: 10, glassPrice: 5, plateCleaningPrice: 2, glassCleaningPrice: 0.40 },
     rentals: [],
     salaries: []
   }

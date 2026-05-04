@@ -1445,7 +1445,7 @@ function App() {
               <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
                 <img src="logo-mark.png" alt="Melon Events" style={{ width: '80px', marginBottom: '1.5rem' }} />
                 <h2 style={{ marginBottom: '0.5rem' }}>Melon Events</h2>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.2 (Stable)</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.3 (Stable)</div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
                   <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
