@@ -148,6 +148,15 @@ autoUpdater.on('update-downloaded', (info: any) => {
   })
 })
 
+autoUpdater.on('update-not-available', () => {
+  dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'Up to Date',
+    message: 'You are already using the latest version of Melon Events.',
+    buttons: ['OK']
+  })
+})
+
 autoUpdater.on('error', (err: any) => {
   console.error('Update error:', err)
 })
