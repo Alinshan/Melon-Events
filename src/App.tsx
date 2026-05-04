@@ -1445,7 +1445,7 @@ function App() {
               <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
                 <img src="logo-mark.png" alt="Melon Events" style={{ width: '80px', marginBottom: '1.5rem' }} />
                 <h2 style={{ marginBottom: '0.5rem' }}>Melon Events</h2>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.1 (Stable)</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.2 (Stable)</div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
                   <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
@@ -1474,7 +1474,11 @@ function App() {
                     <button className="btn-primary" onClick={() => (window as any).electronAPI.openExternal('https://github.com/Alinshan/Melon-Events/releases')}>
                       <ExternalLink size={18} /> Visit GitHub Releases
                     </button>
-                    <button className="btn-secondary" onClick={() => alert('Update check complete. You are using the latest version (1.0.0).')}>
+                    <button className="btn-secondary" onClick={async () => {
+                      const res = await (window as any).electronAPI.checkForUpdates()
+                      if (res.status === 'error') alert('Update check failed: ' + res.message)
+                      else if (res.status === 'dev') alert(res.message)
+                    }}>
                       Check for Updates
                     </button>
                   </div>

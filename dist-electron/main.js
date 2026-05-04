@@ -35,7 +35,12 @@ function createWindow() {
         win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
     }
 }
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    createWindow();
+    if (!isDev) {
+        autoUpdater.checkForUpdates();
+    }
+});
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
