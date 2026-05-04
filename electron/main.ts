@@ -8,6 +8,7 @@ autoUpdater.autoDownload = false // Let user decide
 autoUpdater.autoInstallOnAppQuit = true
 
 let win: any = null
+let isManualCheck = false
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -115,9 +116,11 @@ ipcMain.handle('open-external', (_: any, url: string) => {
 ipcMain.handle('check-for-updates', async () => {
   if (isDev) return { status: 'dev', message: 'Update check skipped in development mode.' }
   try {
+    isManualCheck = true
     const result = await autoUpdater.checkForUpdates()
     return { status: 'checking', result }
   } catch (error: any) {
+    isManualCheck = false
     return { status: 'error', message: error.message }
   }
 })
@@ -129,6 +132,7 @@ autoUpdater.on('update-available', (info: any) => {
     message: `A new version (${info.version}) is available. Do you want to download it now?`,
     buttons: ['Download', 'Later']
   }).then((result: any) => {
+    isManualCheck = false
     if (result.response === 0) {
       autoUpdater.downloadUpdate()
     }
@@ -149,14 +153,18 @@ autoUpdater.on('update-downloaded', (info: any) => {
 })
 
 autoUpdater.on('update-not-available', () => {
-  dialog.showMessageBox(win, {
-    type: 'info',
-    title: 'Up to Date',
-    message: 'You are already using the latest version of Melon Events.',
-    buttons: ['OK']
-  })
+  if (isManualCheck) {
+    dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'Up to Date',
+      message: 'You are already using the latest version of Melon Events.',
+      buttons: ['OK']
+    })
+    isManualCheck = false
+  }
 })
 
 autoUpdater.on('error', (err: any) => {
   console.error('Update error:', err)
+  isManualCheck = false
 })
