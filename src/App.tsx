@@ -37,6 +37,7 @@ interface ItemSettings {
   glassCleaningPrice: number
   totalPlates: number
   totalGlasses: number
+  totalBoxes?: number
   employees?: string[]
   owner1Name?: string
   owner2Name?: string
@@ -44,6 +45,7 @@ interface ItemSettings {
   owner2Investment?: number
   plateLossPrice?: number
   glassLossPrice?: number
+  boxLossPrice?: number
 }
 
 interface Rental {
@@ -60,6 +62,9 @@ interface Rental {
   isReturned: boolean
   returnDate?: string
   damageCharge?: number
+  lostPlates?: number
+  lostGlasses?: number
+  lostBoxes?: number
   isCleaned?: boolean
   cleaningCost?: number
   unusedPlateCount?: number
@@ -86,6 +91,9 @@ interface ExpenseRecord {
   category: string
   description: string
   amount: number
+  lostPlates?: number
+  lostGlasses?: number
+  lostBoxes?: number
 }
 
 interface OwnerTransaction {
@@ -136,39 +144,51 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
           </div>
           <div className="form-group">
             <label>Plate Count</label>
-            <input type="number" value={edited.plateCount} onChange={e => setEdited({ ...edited, plateCount: Number(e.target.value) })} required />
+            <input type="number" min="0"  value={edited.plateCount || ''} onChange={e => setEdited({ ...edited, plateCount: Math.max(0, Number(e.target.value)) })} required />
           </div>
           <div className="form-group">
             <label>Glass Count</label>
-            <input type="number" value={edited.glassCount} onChange={e => setEdited({ ...edited, glassCount: Number(e.target.value) })} required />
+            <input type="number" min="0"  value={edited.glassCount || ''} onChange={e => setEdited({ ...edited, glassCount: Math.max(0, Number(e.target.value)) })} required />
           </div>
           <div className="form-group">
             <label>Unused Plates</label>
-            <input type="number" value={edited.unusedPlateCount || 0} onChange={e => setEdited({ ...edited, unusedPlateCount: Number(e.target.value) })} />
+            <input type="number" min="0"  value={edited.unusedPlateCount || ''} onChange={e => setEdited({ ...edited, unusedPlateCount: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Unused Glasses</label>
-            <input type="number" value={edited.unusedGlassCount || 0} onChange={e => setEdited({ ...edited, unusedGlassCount: Number(e.target.value) })} />
+            <input type="number" min="0"  value={edited.unusedGlassCount || ''} onChange={e => setEdited({ ...edited, unusedGlassCount: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Travel Expense (₹)</label>
-            <input type="number" value={edited.travelExpense || 0} onChange={e => setEdited({ ...edited, travelExpense: Number(e.target.value) })} />
+            <input type="number" min="0"  value={edited.travelExpense || ''} onChange={e => setEdited({ ...edited, travelExpense: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Discount (₹)</label>
-            <input type="number" value={edited.discount || 0} onChange={e => setEdited({ ...edited, discount: Number(e.target.value) })} />
+            <input type="number" min="0"  value={edited.discount || ''} onChange={e => setEdited({ ...edited, discount: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Plate Price (₹)</label>
-            <input type="number" step="0.01" value={edited.platePrice} onChange={e => setEdited({ ...edited, platePrice: Number(e.target.value) })} />
+            <input type="number" min="0"  step="0.01" value={edited.platePrice || ''} onChange={e => setEdited({ ...edited, platePrice: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Glass Price (₹)</label>
-            <input type="number" step="0.01" value={edited.glassPrice} onChange={e => setEdited({ ...edited, glassPrice: Number(e.target.value) })} />
+            <input type="number" min="0"  step="0.01" value={edited.glassPrice || ''} onChange={e => setEdited({ ...edited, glassPrice: Math.max(0, Number(e.target.value)) })} />
           </div>
           <div className="form-group">
             <label>Damage Charge (₹)</label>
-            <input type="number" value={edited.damageCharge || 0} onChange={e => setEdited({ ...edited, damageCharge: Number(e.target.value) })} />
+            <input type="number" min="0"  value={edited.damageCharge || ''} onChange={e => setEdited({ ...edited, damageCharge: Math.max(0, Number(e.target.value)) })} />
+          </div>
+          <div className="form-group">
+            <label>Lost/Broken Plates</label>
+            <input type="number" min="0"  value={edited.lostPlates || ''} onChange={e => setEdited({ ...edited, lostPlates: Math.max(0, Number(e.target.value)) })} />
+          </div>
+          <div className="form-group">
+            <label>Lost/Broken Glasses</label>
+            <input type="number" min="0"  value={edited.lostGlasses || ''} onChange={e => setEdited({ ...edited, lostGlasses: Math.max(0, Number(e.target.value)) })} />
+          </div>
+          <div className="form-group">
+            <label>Lost/Broken Boxes</label>
+            <input type="number" min="0"  value={edited.lostBoxes || ''} onChange={e => setEdited({ ...edited, lostBoxes: Math.max(0, Number(e.target.value)) })} />
           </div>
           {edited.isReturned && (
             <div className="form-group">
@@ -213,11 +233,11 @@ const EditSalaryModal = ({ salary, onSave, onCancel }: { salary: SalaryRecord, o
         </div>
         <div className="form-group">
           <label>Plate Count</label>
-          <input type="number" value={edited.plateCount} onChange={e => setEdited({ ...edited, plateCount: Number(e.target.value) })} required />
+          <input type="number" min="0"  value={edited.plateCount || ''} onChange={e => setEdited({ ...edited, plateCount: Math.max(0, Number(e.target.value)) })} required />
         </div>
         <div className="form-group">
           <label>Glass Count</label>
-          <input type="number" value={edited.glassCount} onChange={e => setEdited({ ...edited, glassCount: Number(e.target.value) })} required />
+          <input type="number" min="0"  value={edited.glassCount || ''} onChange={e => setEdited({ ...edited, glassCount: Math.max(0, Number(e.target.value)) })} required />
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
           <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
@@ -253,7 +273,7 @@ const EditExpenseModal = ({ expense, onSave, onCancel }: { expense: ExpenseRecor
         </div>
         <div className="form-group">
           <label>Amount (₹)</label>
-          <input type="number" value={edited.amount} onChange={e => setEdited({ ...edited, amount: Number(e.target.value) })} required />
+          <input type="number" min="0"  value={edited.amount || ''} onChange={e => setEdited({ ...edited, amount: Math.max(0, Number(e.target.value)) })} required />
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
           <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
@@ -298,6 +318,9 @@ function App() {
   const [damageChargeInput, setDamageChargeInput] = useState<string>('')
   const [unusedPlatesInput, setUnusedPlatesInput] = useState<string>('')
   const [unusedGlassesInput, setUnusedGlassesInput] = useState<string>('')
+  const [lostPlatesInput, setLostPlatesInput] = useState<string>('')
+  const [lostGlassesInput, setLostGlassesInput] = useState<string>('')
+  const [lostBoxesInput, setLostBoxesInput] = useState<string>('')
   const [cleaningRentalId, setCleaningRentalId] = useState<string | null>(null)
   const [cleaningEmployeeSelect, setCleaningEmployeeSelect] = useState<string>('')
   const [cleaningPlatesInput, setCleaningPlatesInput] = useState<string>('')
@@ -343,7 +366,10 @@ function App() {
   // Auto-save data whenever it changes
   useEffect(() => {
     if (!loading) {
-      window.electronAPI.saveData({ ...data, theme })
+      const timeoutId = setTimeout(() => {
+        window.electronAPI.saveData({ ...data, theme })
+      }, 500)
+      return () => clearTimeout(timeoutId)
     }
   }, [data, theme, loading])
 
@@ -390,13 +416,29 @@ function App() {
       totalPlatesOut, totalGlassesOut,
       platesPendingCleaning, glassesPendingCleaning,
         totalExpenses, netProfit, totalDamageCollected,
-        totalPlatesLost: expenses.filter(e => e.category === 'Damage/Loss' && e.description.toLowerCase().includes('plate')).reduce((s, e) => {
-          const match = e.description.match(/(\d+)\s*plate/i)
-          return s + (match ? parseInt(match[1]) : 0)
+        totalPlatesLost: rentals.reduce((s, r) => s + (Number(r.lostPlates) || 0), 0) + expenses.reduce((s, e) => {
+          if (e.lostPlates !== undefined) return s + Number(e.lostPlates)
+          if (e.category === 'Damage/Loss' && e.description.toLowerCase().includes('plate')) {
+            const match = e.description.match(/(\d+)\s*plate/i)
+            return s + (match ? parseInt(match[1]) : 0)
+          }
+          return s
         }, 0),
-        totalGlassesLost: expenses.filter(e => e.category === 'Damage/Loss' && e.description.toLowerCase().includes('glass')).reduce((s, e) => {
-          const match = e.description.match(/(\d+)\s*glass/i)
-          return s + (match ? parseInt(match[1]) : 0)
+        totalGlassesLost: rentals.reduce((s, r) => s + (Number(r.lostGlasses) || 0), 0) + expenses.reduce((s, e) => {
+          if (e.lostGlasses !== undefined) return s + Number(e.lostGlasses)
+          if (e.category === 'Damage/Loss' && e.description.toLowerCase().includes('glass')) {
+            const match = e.description.match(/(\d+)\s*glass/i)
+            return s + (match ? parseInt(match[1]) : 0)
+          }
+          return s
+        }, 0),
+        totalBoxesLost: rentals.reduce((s, r) => s + (Number(r.lostBoxes) || 0), 0) + expenses.reduce((s, e) => {
+          if (e.lostBoxes !== undefined) return s + Number(e.lostBoxes)
+          if (e.category === 'Damage/Loss' && e.description.toLowerCase().includes('box')) {
+            const match = e.description.match(/(\d+)\s*box/i)
+            return s + (match ? parseInt(match[1]) : 0)
+          }
+          return s
         }, 0)
       }
     }, [data.rentals, data.salaries, data.expenses, data.settings])
@@ -432,6 +474,9 @@ function App() {
     setDamageChargeInput('')
     setUnusedPlatesInput('')
     setUnusedGlassesInput('')
+    setLostPlatesInput('')
+    setLostGlassesInput('')
+    setLostBoxesInput('')
   }
 
   const confirmReturn = (e: React.FormEvent) => {
@@ -440,6 +485,9 @@ function App() {
     const damageCharge = Number(damageChargeInput) || 0
     const unusedPlates = Number(unusedPlatesInput) || 0
     const unusedGlasses = Number(unusedGlassesInput) || 0
+    const lostPlates = Number(lostPlatesInput) || 0
+    const lostGlasses = Number(lostGlassesInput) || 0
+    const lostBoxes = Number(lostBoxesInput) || 0
     const returnDate = new Date().toISOString().split('T')[0]
 
     setData(prev => ({
@@ -454,6 +502,9 @@ function App() {
             isReturned: true,
             returnDate,
             damageCharge,
+            lostPlates,
+            lostGlasses,
+            lostBoxes,
             unusedPlateCount: unusedPlates,
             unusedGlassCount: unusedGlasses,
             total
@@ -693,6 +744,16 @@ function App() {
       updateSettings({ ...data.settings, employees: [...(data.settings.employees || []), newEmployeeName] })
       setCleaningEmployee(newEmployeeName)
       setNewEmployeeName('')
+    }
+  }
+
+  const handleDeleteEmployee = () => {
+    if (cleaningEmployee && window.confirm(`Are you sure you want to delete employee "${cleaningEmployee}"?`)) {
+      updateSettings({ 
+        ...data.settings, 
+        employees: data.settings.employees?.filter(e => e !== cleaningEmployee) 
+      })
+      setCleaningEmployee('')
     }
   }
 
@@ -1163,65 +1224,24 @@ function App() {
                   <div className="card" style={{ marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
                       <AlertTriangle size={20} style={{ marginRight: '0.5rem', color: 'var(--danger)' }} />
-                      <h3 style={{ margin: 0 }}>Report Damage / Loss</h3>
+                      <h3 style={{ margin: 0 }}>Total Inventory Lost</h3>
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                      Log items broken or missing after cleaning that cannot be charged to the customer.
+                      Total items reported as lost, missing, or permanently broken across all records.
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                      <button 
-                        className="btn-secondary" 
-                        style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                        onClick={() => {
-                          const count = prompt("How many PLATES were lost/broken?")
-                          if (count && !isNaN(Number(count))) {
-                            const amount = Number(count) * (data.settings.plateLossPrice || 0)
-                            addExpense({
-                              date: new Date().toISOString().split('T')[0],
-                              category: 'Damage/Loss',
-                              description: `${count} Plates lost/broken`,
-                              amount
-                            })
-                          }
-                        }}
-                      >
-                        Loss: Plates
-                      </button>
-                      <button 
-                        className="btn-secondary" 
-                        style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                        onClick={() => {
-                          const count = prompt("How many GLASSES were lost/broken?")
-                          if (count && !isNaN(Number(count))) {
-                            const amount = Number(count) * (data.settings.glassLossPrice || 0)
-                            addExpense({
-                              date: new Date().toISOString().split('T')[0],
-                              category: 'Damage/Loss',
-                              description: `${count} Glasses lost/broken`,
-                              amount
-                            })
-                          }
-                        }}
-                      >
-                        Loss: Glasses
-                      </button>
-                      <button 
-                        className="btn-secondary" 
-                        onClick={() => {
-                          const desc = prompt("Describe the damage (e.g., Damaged Carry Box):")
-                          const amt = prompt("Estimated loss amount (₹):")
-                          if (desc && amt && !isNaN(Number(amt))) {
-                            addExpense({
-                              date: new Date().toISOString().split('T')[0],
-                              category: 'Damage/Loss',
-                              description: desc,
-                              amount: Number(amt)
-                            })
-                          }
-                        }}
-                      >
-                        Other Loss
-                      </button>
+                      <div className="stat-card" style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', padding: '1rem' }}>
+                        <span className="stat-label" style={{ color: 'var(--danger)' }}>Lost Plates</span>
+                        <span className="stat-value">{stats.totalPlatesLost}</span>
+                      </div>
+                      <div className="stat-card" style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', padding: '1rem' }}>
+                        <span className="stat-label" style={{ color: 'var(--danger)' }}>Lost Glasses</span>
+                        <span className="stat-value">{stats.totalGlassesLost}</span>
+                      </div>
+                      <div className="stat-card" style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', padding: '1rem' }}>
+                        <span className="stat-label" style={{ color: 'var(--danger)' }}>Lost Boxes</span>
+                        <span className="stat-value">{stats.totalBoxesLost || 0}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -1246,15 +1266,31 @@ function App() {
                         </span>
                         <span style={{ fontWeight: '700' }}>{Math.max(0, data.settings.totalGlasses - stats.totalGlassesOut - stats.totalGlassesLost)} / {data.settings.totalGlasses}</span>
                       </div>
-                      <div className="progress-bg" style={{ height: '8px' }}>
+                      <div className="progress-bg" style={{ height: '8px', marginBottom: '1rem' }}>
                         <div className="progress-fill" style={{ 
                           width: `${((data.settings.totalGlasses - stats.totalGlassesOut - stats.totalGlassesLost) / data.settings.totalGlasses) * 100}%`,
                           backgroundColor: 'var(--accent-color)'
                         }}></div>
                       </div>
-                      { (stats.totalPlatesLost > 0 || stats.totalGlassesLost > 0) && (
+                      {data.settings.totalBoxes !== undefined && (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Package size={16} /> Boxes in Stock
+                            </span>
+                            <span style={{ fontWeight: '700' }}>{Math.max(0, data.settings.totalBoxes - stats.totalBoxesLost)} / {data.settings.totalBoxes}</span>
+                          </div>
+                          <div className="progress-bg" style={{ height: '8px' }}>
+                            <div className="progress-fill" style={{ 
+                              width: `${data.settings.totalBoxes > 0 ? ((data.settings.totalBoxes - stats.totalBoxesLost) / data.settings.totalBoxes) * 100 : 0}%`,
+                              backgroundColor: 'var(--warning)'
+                            }}></div>
+                          </div>
+                        </>
+                      )}
+                      { (stats.totalPlatesLost > 0 || stats.totalGlassesLost > 0 || stats.totalBoxesLost > 0) && (
                         <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--danger)', fontStyle: 'italic' }}>
-                          * Note: {stats.totalPlatesLost} plates and {stats.totalGlassesLost} glasses have been recorded as permanent loss.
+                          * Note: {stats.totalPlatesLost} plates, {stats.totalGlassesLost} glasses, and {stats.totalBoxesLost} boxes have been recorded as permanent loss.
                         </div>
                       )}
                     </div>
@@ -1379,17 +1415,24 @@ function App() {
                   <h3>Pending Cleaning</h3>
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                     <label style={{ margin: 0 }}>Assign To Employee:</label>
-                    <select
-                      value={cleaningEmployee}
-                      onChange={e => setCleaningEmployee(e.target.value)}
-                      style={{ padding: '0.4rem', width: '150px' }}
-                    >
-                      <option value="">Select...</option>
-                      {data.settings.employees?.map(emp => (
-                        <option key={emp} value={emp}>{emp}</option>
-                      ))}
-                    </select>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <select
+                        value={cleaningEmployee}
+                        onChange={e => setCleaningEmployee(e.target.value)}
+                        style={{ padding: '0.4rem', width: '150px' }}
+                      >
+                        <option value="">Select...</option>
+                        {data.settings.employees?.map(emp => (
+                          <option key={emp} value={emp}>{emp}</option>
+                        ))}
+                      </select>
+                      {cleaningEmployee && (
+                        <button className="btn-secondary" onClick={handleDeleteEmployee} title="Delete Selected Employee" style={{ padding: '0.4rem', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '0.5rem' }}>
                       <input
                         type="text"
                         placeholder="New name"
@@ -1472,14 +1515,14 @@ function App() {
                         <input
                           type="number"
                           min="0"
-                          value={manualPlates}
+                          value={manualPlates || ''}
                           onChange={e => setManualPlates(e.target.value)}
                           style={{ width: '60px', padding: '0.2rem 0.4rem' }}
                         /> P /
                         <input
                           type="number"
                           min="0"
-                          value={manualGlasses}
+                          value={manualGlasses || ''}
                           onChange={e => setManualGlasses(e.target.value)}
                           style={{ width: '60px', padding: '0.2rem 0.4rem' }}
                         /> G
@@ -1619,82 +1662,89 @@ function App() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                   These prices will be applied to all new rentals and cleaning records.
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
                     <label>Total Plates Stock</label>
-                    <input
-                      type="number"
-                      value={data.settings.totalPlates || 0}
-                      onChange={e => updateSettings({ ...data.settings, totalPlates: Number(e.target.value) })}
+                    <input type="number" min="0" 
+                      value={data.settings.totalPlates || ''}
+                      onChange={e => updateSettings({ ...data.settings, totalPlates: Math.max(0, Number(e.target.value)) })}
                     />
                   </div>
                   <div className="form-group">
                     <label>Total Glasses Stock</label>
-                    <input
-                      type="number"
-                      value={data.settings.totalGlasses || 0}
-                      onChange={e => updateSettings({ ...data.settings, totalGlasses: Number(e.target.value) })}
+                    <input type="number" min="0" 
+                      value={data.settings.totalGlasses || ''}
+                      onChange={e => updateSettings({ ...data.settings, totalGlasses: Math.max(0, Number(e.target.value)) })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Total Boxes Stock</label>
+                    <input type="number" min="0" 
+                      value={data.settings.totalBoxes || ''}
+                      onChange={e => updateSettings({ ...data.settings, totalBoxes: Math.max(0, Number(e.target.value)) })}
                     />
                   </div>
                 </div>
                 <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
                 <h3>Inventory Loss Prices (Internal)</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
                   <div className="form-group">
                     <label>Plate Loss Cost (₹)</label>
-                    <input
-                      type="number"
-                      value={data.settings.plateLossPrice || 0}
-                      onChange={e => updateSettings({ ...data.settings, plateLossPrice: Number(e.target.value) })}
+                    <input type="number" min="0" 
+                      value={data.settings.plateLossPrice || ''}
+                      onChange={e => updateSettings({ ...data.settings, plateLossPrice: Math.max(0, Number(e.target.value)) })}
                     />
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cost to business when 1 plate is lost/broken.</p>
                   </div>
                   <div className="form-group">
                     <label>Glass Loss Cost (₹)</label>
-                    <input
-                      type="number"
-                      value={data.settings.glassLossPrice || 0}
-                      onChange={e => updateSettings({ ...data.settings, glassLossPrice: Number(e.target.value) })}
+                    <input type="number" min="0" 
+                      value={data.settings.glassLossPrice || ''}
+                      onChange={e => updateSettings({ ...data.settings, glassLossPrice: Math.max(0, Number(e.target.value)) })}
                     />
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cost to business when 1 glass is lost/broken.</p>
+                  </div>
+                  <div className="form-group">
+                    <label>Box Loss Cost (₹)</label>
+                    <input type="number" min="0" 
+                      value={data.settings.boxLossPrice || ''}
+                      onChange={e => updateSettings({ ...data.settings, boxLossPrice: Math.max(0, Number(e.target.value)) })}
+                    />
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cost to business when 1 box is lost/broken.</p>
                   </div>
                 </div>
                 <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
                 <div className="form-group">
                   <label>Plate Rent Price (₹)</label>
-                  <input
-                    type="number"
+                  <input type="number" min="0" 
                     step="0.01"
-                    value={data.settings.platePrice}
-                    onChange={e => updateSettings({ ...data.settings, platePrice: Number(e.target.value) })}
+                    value={data.settings.platePrice || ''}
+                    onChange={e => updateSettings({ ...data.settings, platePrice: Math.max(0, Number(e.target.value)) })}
                   />
                 </div>
                 <div className="form-group">
                   <label>Glass Rent Price (₹)</label>
-                  <input
-                    type="number"
+                  <input type="number" min="0" 
                     step="0.01"
-                    value={data.settings.glassPrice}
-                    onChange={e => updateSettings({ ...data.settings, glassPrice: Number(e.target.value) })}
+                    value={data.settings.glassPrice || ''}
+                    onChange={e => updateSettings({ ...data.settings, glassPrice: Math.max(0, Number(e.target.value)) })}
                   />
                 </div>
                 <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
                 <div className="form-group">
                   <label>Plate Cleaning Salary (₹ per plate)</label>
-                  <input
-                    type="number"
+                  <input type="number" min="0" 
                     step="0.01"
-                    value={data.settings.plateCleaningPrice}
-                    onChange={e => updateSettings({ ...data.settings, plateCleaningPrice: Number(e.target.value) })}
+                    value={data.settings.plateCleaningPrice || ''}
+                    onChange={e => updateSettings({ ...data.settings, plateCleaningPrice: Math.max(0, Number(e.target.value)) })}
                   />
                 </div>
                 <div className="form-group">
                   <label>Glass Cleaning Salary (₹ per glass)</label>
-                  <input
-                    type="number"
+                  <input type="number" min="0" 
                     step="0.01"
-                    value={data.settings.glassCleaningPrice}
-                    onChange={e => updateSettings({ ...data.settings, glassCleaningPrice: Number(e.target.value) })}
+                    value={data.settings.glassCleaningPrice || ''}
+                    onChange={e => updateSettings({ ...data.settings, glassCleaningPrice: Math.max(0, Number(e.target.value)) })}
                   />
                 </div>
                 <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-start' }}>
@@ -1711,6 +1761,52 @@ function App() {
                   }}>
                     <RotateCcw size={16} style={{ marginRight: '0.5rem' }} /> Restore Default Prices
                   </button>
+                </div>
+                <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
+                <div style={{ marginTop: '2rem' }}>
+                  <h3>Employee Management</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    Manage the staff available for cleaning assignments.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <input
+                      type="text"
+                      placeholder="New employee name"
+                      value={newEmployeeName}
+                      onChange={e => setNewEmployeeName(e.target.value)}
+                      style={{ padding: '0.5rem', width: '200px' }}
+                    />
+                    <button className="btn-secondary" onClick={handleAddEmployee}>
+                      Add Employee
+                    </button>
+                  </div>
+                  {data.settings.employees && data.settings.employees.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {data.settings.employees.map(emp => (
+                        <div key={emp} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 1rem', background: 'var(--bg-color)', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                          <span>{emp}</span>
+                          <button 
+                            className="btn-secondary" 
+                            style={{ padding: '0.3rem', color: 'var(--danger)', borderColor: 'transparent' }}
+                            title="Delete Employee"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete employee "${emp}"?`)) {
+                                updateSettings({ 
+                                  ...data.settings, 
+                                  employees: data.settings.employees?.filter(e => e !== emp) 
+                                })
+                                if (cleaningEmployee === emp) setCleaningEmployee('')
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>No employees added yet.</div>
+                  )}
                 </div>
                 <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)' }} />
                 <div style={{ marginTop: '2rem' }}>
@@ -1803,18 +1899,16 @@ function App() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                         <div className="form-group">
                           <label>{data.settings.owner1Name || 'ASHRAF M'} Investment (₹)</label>
-                          <input
-                            type="number"
-                            value={data.settings.owner1Investment || 0}
-                            onChange={e => updateSettings({ ...data.settings, owner1Investment: Number(e.target.value) })}
+                          <input type="number" min="0" 
+                            value={data.settings.owner1Investment || ''}
+                            onChange={e => updateSettings({ ...data.settings, owner1Investment: Math.max(0, Number(e.target.value)) })}
                           />
                         </div>
                         <div className="form-group">
                           <label>{data.settings.owner2Name || 'RASHEED M'} Investment (₹)</label>
-                          <input
-                            type="number"
-                            value={data.settings.owner2Investment || 0}
-                            onChange={e => updateSettings({ ...data.settings, owner2Investment: Number(e.target.value) })}
+                          <input type="number" min="0" 
+                            value={data.settings.owner2Investment || ''}
+                            onChange={e => updateSettings({ ...data.settings, owner2Investment: Math.max(0, Number(e.target.value)) })}
                           />
                         </div>
                       </div>
@@ -1847,7 +1941,7 @@ function App() {
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
                             <label>Amount (₹)</label>
-                            <input type="number" id="tx-amount" placeholder="0.00" />
+                            <input type="number" min="0"  id="tx-amount" placeholder="0.00" />
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
                             <label>Date</label>
@@ -2156,7 +2250,7 @@ SOFTWARE.`}
                 <input
                   type="number"
                   min="0"
-                  value={unusedPlatesInput}
+                  value={unusedPlatesInput || ''}
                   onChange={e => setUnusedPlatesInput(e.target.value)}
                 />
               </div>
@@ -2165,8 +2259,35 @@ SOFTWARE.`}
                 <input
                   type="number"
                   min="0"
-                  value={unusedGlassesInput}
+                  value={unusedGlassesInput || ''}
                   onChange={e => setUnusedGlassesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Lost/Broken Plates</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={lostPlatesInput || ''}
+                  onChange={e => setLostPlatesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Lost/Broken Glasses</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={lostGlassesInput || ''}
+                  onChange={e => setLostGlassesInput(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Lost/Broken Boxes</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={lostBoxesInput || ''}
+                  onChange={e => setLostBoxesInput(e.target.value)}
                 />
               </div>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -2175,7 +2296,7 @@ SOFTWARE.`}
                   type="number"
                   min="0"
                   step="0.01"
-                  value={damageChargeInput}
+                  value={damageChargeInput || ''}
                   onChange={e => setDamageChargeInput(e.target.value)}
                   autoFocus
                 />
@@ -2221,7 +2342,7 @@ SOFTWARE.`}
                 <input
                   type="number"
                   min="0"
-                  value={cleaningPlatesInput}
+                  value={cleaningPlatesInput || ''}
                   onChange={e => setCleaningPlatesInput(e.target.value)}
                 />
               </div>
@@ -2230,7 +2351,7 @@ SOFTWARE.`}
                 <input
                   type="number"
                   min="0"
-                  value={cleaningGlassesInput}
+                  value={cleaningGlassesInput || ''}
                   onChange={e => setCleaningGlassesInput(e.target.value)}
                 />
               </div>
@@ -2240,7 +2361,7 @@ SOFTWARE.`}
                   type="number"
                   min="0"
                   step="0.01"
-                  value={cleaningPlateRateInput}
+                  value={cleaningPlateRateInput || ''}
                   onChange={e => setCleaningPlateRateInput(e.target.value)}
                 />
               </div>
@@ -2250,7 +2371,7 @@ SOFTWARE.`}
                   type="number"
                   min="0"
                   step="0.01"
-                  value={cleaningGlassRateInput}
+                  value={cleaningGlassRateInput || ''}
                   onChange={e => setCleaningGlassRateInput(e.target.value)}
                 />
               </div>
@@ -2345,27 +2466,27 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
         </div>
         <div className="form-group">
           <label>Plate Count</label>
-          <input type="number" min="0" value={plates} onChange={e => setPlates(e.target.value)} />
+          <input type="number" min="0" value={plates || ''} onChange={e => setPlates(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
           <label>Plate Price (₹)</label>
-          <input type="number" min="0" step="0.01" value={platePriceOverride} onChange={e => setPlatePriceOverride(e.target.value)} />
+          <input type="number" min="0" step="0.01" value={platePriceOverride || ''} onChange={e => setPlatePriceOverride(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
           <label>Glass Count</label>
-          <input type="number" min="0" value={glasses} onChange={e => setGlasses(e.target.value)} />
+          <input type="number" min="0" value={glasses || ''} onChange={e => setGlasses(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
           <label>Glass Price (₹)</label>
-          <input type="number" min="0" step="0.01" value={glassPriceOverride} onChange={e => setGlassPriceOverride(e.target.value)} />
+          <input type="number" min="0" step="0.01" value={glassPriceOverride || ''} onChange={e => setGlassPriceOverride(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
           <label>Discount (₹)</label>
-          <input type="number" min="0" step="0.01" value={discount} onChange={e => setDiscount(e.target.value)} />
+          <input type="number" min="0" step="0.01" value={discount || ''} onChange={e => setDiscount(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
           <label>Travel Expense (₹)</label>
-          <input type="number" min="0" step="0.01" value={travelExpense} onChange={e => setTravelExpense(e.target.value)} placeholder="Internal cost" />
+          <input type="number" min="0" step="0.01" value={travelExpense || ''} onChange={e => setTravelExpense(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} placeholder="Internal cost" />
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
@@ -2585,7 +2706,7 @@ function ExpenseForm({ onSubmit }: { onSubmit: (record: Omit<ExpenseRecord, 'id'
         </div>
         <div className="form-group">
           <label>Amount (₹)</label>
-          <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.00" required />
+          <input type="number" step="0.01" min="0.01" value={amount || ''} onChange={e => setAmount(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))} placeholder="0.00" required />
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
