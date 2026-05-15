@@ -782,23 +782,37 @@ function App() {
   const generateOwnerReportPDF = (ownerName: string | null) => {
     try {
       const doc = new jsPDF()
-      const primaryRed = [227, 30, 36]
-      const brandYellow = [255, 209, 0]
+      const primaryRed = [237, 28, 36]
+      const brandYellow = [255, 203, 5]
       const darkGrey = [88, 89, 91]
 
       // --- Logo Drawing (Same as invoice) ---
+      // Left Red Shard
       doc.setFillColor(primaryRed[0], primaryRed[1], primaryRed[2])
+      doc.setDrawColor(primaryRed[0], primaryRed[1], primaryRed[2])
       doc.triangle(20, 15, 32, 17, 35, 45, 'F')
       doc.triangle(20, 15, 35, 45, 22, 48, 'F')
+
+      // Right Yellow Shard
       doc.setFillColor(brandYellow[0], brandYellow[1], brandYellow[2])
+      doc.setDrawColor(brandYellow[0], brandYellow[1], brandYellow[2])
       doc.triangle(38, 17, 50, 15, 48, 48, 'F')
       doc.triangle(38, 17, 48, 48, 35, 45, 'F')
+
+      // V-shape lines
       doc.setDrawColor(darkGrey[0], darkGrey[1], darkGrey[2])
-      doc.setLineWidth(1)
+      doc.setLineWidth(1.2)
       doc.line(26, 25, 35, 40)
       doc.line(35, 40, 44, 25)
+
+      // White highlight (the "M" or inner V)
+      doc.setDrawColor(255, 255, 255)
+      doc.setLineWidth(0.4)
+      doc.line(29, 27, 35, 37)
+      doc.line(35, 37, 41, 27)
+
       doc.setFontSize(14)
-      doc.setTextColor(0)
+      doc.setTextColor(0, 0, 0)
       doc.setFont("helvetica", "bold")
       doc.text('Melon Events', 20, 52)
       doc.setFontSize(9)
@@ -938,8 +952,8 @@ function App() {
   const generatePDF = (rental: Rental) => {
     try {
       const doc = new jsPDF()
-      const primaryRed = [227, 30, 36] // Brand Red
-      const brandYellow = [255, 209, 0] // Brand Yellow
+      const primaryRed = [237, 28, 36] // Brand Red
+      const brandYellow = [255, 203, 5] // Brand Yellow
       const darkGrey = [88, 89, 91] // V-shape color
 
       // --- Logo Drawing (Vector) ---
@@ -957,13 +971,13 @@ function App() {
 
       // V-shape lines
       doc.setDrawColor(darkGrey[0], darkGrey[1], darkGrey[2])
-      doc.setLineWidth(1)
+      doc.setLineWidth(1.2)
       doc.line(26, 25, 35, 40)
       doc.line(35, 40, 44, 25)
 
-      // White highlight
+      // White highlight (the "M" or inner V)
       doc.setDrawColor(255, 255, 255)
-      doc.setLineWidth(0.3)
+      doc.setLineWidth(0.4)
       doc.line(29, 27, 35, 37)
       doc.line(35, 37, 41, 27)
 
@@ -2134,7 +2148,7 @@ function App() {
               <div className="card" style={{ maxWidth: '600px', textAlign: 'center', padding: '3rem 2rem' }}>
                 <img src="logo-mark.png" alt="Melon Events" style={{ width: '80px', marginBottom: '1.5rem' }} />
                 <h2 style={{ marginBottom: '0.5rem' }}>Melon Events</h2>
-                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.4 (Stable)</div>
+                <div style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Version 1.0.7</div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
                   <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-color)', margin: 0 }}>
