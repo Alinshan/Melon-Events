@@ -25,23 +25,29 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  min-width: 0;
 }
 
 #root {
   height: 100vh;
   display: flex;
+  overflow: hidden;
 }
 
 /* Sidebar Styling */
 .sidebar {
-  width: 260px;
+  width: 220px;
+  min-width: 180px;
+  max-width: 260px;
   background: rgba(15, 23, 42, 0.8);
   border-right: 1px solid var(--border-color);
-  padding: 2rem 1rem;
+  padding: 1.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   backdrop-filter: var(--glass-blur);
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .logo {
@@ -86,9 +92,11 @@ body {
 /* Main Content Area */
 .main-content {
   flex: 1;
-  padding: 2.5rem;
+  padding: 1.5rem;
   overflow-y: auto;
+  overflow-x: hidden;
   background: radial-gradient(circle at top right, rgba(211, 47, 47, 0.05), transparent);
+  min-width: 0;
 }
 
 h1 {
@@ -245,6 +253,8 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .modal {
@@ -256,6 +266,33 @@ tr:hover td {
   padding: 2rem;
   overflow-y: auto;
   border: 1px solid var(--border-color);
+}
+
+/* Overlay for all fixed modals - ensures scrollability on small screens */
+.overlay-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.overlay-form {
+  width: 100%;
+  max-width: 620px;
+  margin: auto;
+}
+
+.overlay-form-sm {
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
 }
 
 /* LIGHT THEME OVERRIDES - PLACED AT BOTTOM TO ENSURE PRECEDENCE */

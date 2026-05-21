@@ -58,6 +58,7 @@ interface Rental {
   glassPrice: number
   discount: number
   travelExpense: number
+  transportationCharge?: number
   total: number
   isReturned: boolean
   returnDate?: string
@@ -121,7 +122,7 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
     e.preventDefault()
     const usedPlates = Math.max(0, edited.plateCount - (edited.unusedPlateCount || 0))
     const usedGlasses = Math.max(0, edited.glassCount - (edited.unusedGlassCount || 0))
-    const total = (usedPlates * (edited.platePrice || settings.platePrice)) + (usedGlasses * (edited.glassPrice || settings.glassPrice)) - (edited.discount || 0)
+    const total = (usedPlates * (edited.platePrice || settings.platePrice)) + (usedGlasses * (edited.glassPrice || settings.glassPrice)) - (edited.discount || 0) + (Number(edited.transportationCharge) || 0)
     onSave({ ...edited, total })
   }
 
@@ -129,9 +130,10 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000,
+      overflowY: 'auto', padding: '1.5rem'
     }}>
-      <form className="card" style={{ width: '600px', border: '1px solid var(--border-color)' }} onSubmit={handleSubmit}>
+      <form className="card" style={{ width: '100%', maxWidth: '600px', margin: 'auto', border: '1px solid var(--border-color)' }} onSubmit={handleSubmit}>
         <h3>Edit Rental {rental.id}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
           <div className="form-group">
@@ -165,6 +167,10 @@ const EditRentalModal = ({ rental, settings, onSave, onCancel }: { rental: Renta
           <div className="form-group">
             <label>Discount (₹)</label>
             <input type="number" min="0"  value={edited.discount || ''} onChange={e => setEdited({ ...edited, discount: Math.max(0, Number(e.target.value)) })} />
+          </div>
+          <div className="form-group">
+            <label>Transport Charge (₹)</label>
+            <input type="number" min="0" step="0.01" value={edited.transportationCharge || ''} onChange={e => setEdited({ ...edited, transportationCharge: Math.max(0, Number(e.target.value)) })} placeholder="Charged to customer" />
           </div>
           <div className="form-group">
             <label>Plate Price (₹)</label>
@@ -219,9 +225,10 @@ const EditSalaryModal = ({ salary, onSave, onCancel }: { salary: SalaryRecord, o
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000,
+      overflowY: 'auto', padding: '1.5rem'
     }}>
-      <form className="card" style={{ width: '400px', border: '1px solid var(--border-color)' }} onSubmit={handleSubmit}>
+      <form className="card" style={{ width: '100%', maxWidth: '400px', margin: 'auto', border: '1px solid var(--border-color)' }} onSubmit={handleSubmit}>
         <h3>Edit Salary Record</h3>
         <div className="form-group">
           <label>Employee Name</label>
@@ -255,9 +262,10 @@ const EditExpenseModal = ({ expense, onSave, onCancel }: { expense: ExpenseRecor
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000,
+      overflowY: 'auto', padding: '1.5rem'
     }}>
-      <form className="card" style={{ width: '400px', border: '1px solid var(--border-color)' }} onSubmit={(e) => { e.preventDefault(); onSave(edited); }}>
+      <form className="card" style={{ width: '100%', maxWidth: '400px', margin: 'auto', border: '1px solid var(--border-color)' }} onSubmit={(e) => { e.preventDefault(); onSave(edited); }}>
         <h3>Edit Expense</h3>
         <div className="form-group">
           <label>Date</label>
@@ -496,7 +504,7 @@ function App() {
         if (r.id === returningRentalId) {
           const usedPlates = Math.max(0, r.plateCount - unusedPlates)
           const usedGlasses = Math.max(0, r.glassCount - unusedGlasses)
-          const total = (usedPlates * r.platePrice) + (usedGlasses * r.glassPrice) - r.discount
+          const total = (usedPlates * r.platePrice) + (usedGlasses * r.glassPrice) - r.discount + (Number(r.transportationCharge) || 0)
           return {
             ...r,
             isReturned: true,
@@ -1040,6 +1048,10 @@ function App() {
         tableData.push(['Damage / Missing Charges', '-', '-', `Rs. ${rental.damageCharge.toFixed(2)}`])
       }
 
+      if (rental.transportationCharge && rental.transportationCharge > 0) {
+        tableData.push(['Transportation Charge', '-', '-', `Rs. ${rental.transportationCharge.toFixed(2)}`])
+      }
+
       autoTable(doc, {
         startY: 95,
         head: [tableData[0]],
@@ -1057,7 +1069,7 @@ function App() {
       const finalY = (doc as any).lastAutoTable.finalY + 15
       const subtotal = ((rental.plateCount - (rental.unusedPlateCount || 0)) * rental.platePrice) + 
                        ((rental.glassCount - (rental.unusedGlassCount || 0)) * rental.glassPrice)
-      const totalWithDamage = subtotal - (rental.discount || 0) + (rental.damageCharge || 0)
+      const totalWithDamage = subtotal - (rental.discount || 0) + (rental.damageCharge || 0) + (rental.transportationCharge || 0)
 
       // --- Totals Section ---
       doc.setFontSize(10)
@@ -1202,10 +1214,10 @@ function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <h1>Dashboard Overview</h1>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 320px)', gap: '1.5rem', alignItems: 'start' }}>
                 {/* Left Column */}
-                <div>
-                  <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', marginBottom: '1.5rem' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: '1.5rem' }}>
                     <div className="stat-card">
                       <span className="stat-label">Total Earnings</span>
                       <span className="stat-value">₹{stats.totalEarnings.toFixed(2)}</span>
@@ -2251,9 +2263,10 @@ SOFTWARE.`}
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000,
+          overflowY: 'auto', padding: '1.5rem'
         }}>
-          <form className="card" style={{ width: '400px', border: '1px solid var(--border-color)' }} onSubmit={confirmReturn}>
+          <form className="card" style={{ width: '100%', maxWidth: '400px', margin: 'auto', border: '1px solid var(--border-color)' }} onSubmit={confirmReturn}>
             <h3>Confirm Return</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
               Are there any damage or missing item charges for this rental?
@@ -2329,9 +2342,10 @@ SOFTWARE.`}
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000,
+          overflowY: 'auto', padding: '1.5rem'
         }}>
-          <form className="card" style={{ width: '400px', border: '1px solid var(--border-color)' }} onSubmit={confirmCleaning}>
+          <form className="card" style={{ width: '100%', maxWidth: '400px', margin: 'auto', border: '1px solid var(--border-color)' }} onSubmit={confirmCleaning}>
             <h3>Assign Cleaning Staff</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
               Select an employee to assign this cleaning task.
@@ -2439,11 +2453,12 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
   const [platePriceOverride, setPlatePriceOverride] = useState<string | number>(settings.platePrice)
   const [glassPriceOverride, setGlassPriceOverride] = useState<string | number>(settings.glassPrice)
   const [discount, setDiscount] = useState<string | number>('')
+  const [transportationCharge, setTransportationCharge] = useState<string | number>('')
   const [travelExpense, setTravelExpense] = useState<string | number>('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
 
   const subtotal = (Number(plates) * Number(platePriceOverride)) + (Number(glasses) * Number(glassPriceOverride))
-  const total = subtotal - Number(discount)
+  const total = subtotal - Number(discount) + Number(transportationCharge)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -2454,8 +2469,9 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
       glassCount: glasses,
       platePrice: Number(platePriceOverride),
       glassPrice: Number(glassPriceOverride),
-      discount,
-      travelExpense,
+      discount: Number(discount) || 0,
+      transportationCharge: Number(transportationCharge) || 0,
+      travelExpense: Number(travelExpense) || 0,
       total,
       date
     })
@@ -2463,6 +2479,7 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
     setPlates('')
     setGlasses('')
     setDiscount('')
+    setTransportationCharge('')
     setTravelExpense('')
   }
 
@@ -2499,7 +2516,11 @@ function NewRentalForm({ settings, onSubmit }: { settings: ItemSettings, onSubmi
           <input type="number" min="0" step="0.01" value={discount || ''} onChange={e => setDiscount(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} />
         </div>
         <div className="form-group">
-          <label>Travel Expense (₹)</label>
+          <label>Transport Charge (₹)</label>
+          <input type="number" min="0" step="0.01" value={transportationCharge || ''} onChange={e => setTransportationCharge(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} placeholder="Charged to customer" />
+        </div>
+        <div className="form-group">
+          <label>Internal Travel Exp (₹)</label>
           <input type="number" min="0" step="0.01" value={travelExpense || ''} onChange={e => setTravelExpense(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)).toString())} placeholder="Internal cost" />
         </div>
       </div>
